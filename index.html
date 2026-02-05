@@ -1,0 +1,608 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Hytale Player Lookup</title>
+    <meta name="description" content="Simple Hytale player lookup using PlayerDB. Search by username or UUID." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        color-scheme: only light;
+        --bg-0: #f6f7f2;
+        --bg-1: #e7efe7;
+        --bg-2: #fdfbf6;
+        --ink-0: #0f1b16;
+        --ink-1: #23362e;
+        --ink-2: #4a5f55;
+        --accent-0: #1f6b58;
+        --accent-1: #2fa37a;
+        --accent-2: #e9a94a;
+        --danger: #b23c3c;
+        --card: #ffffff;
+        --shadow: 0 18px 40px rgba(18, 34, 28, 0.12);
+        --radius-lg: 24px;
+        --radius-md: 16px;
+        --radius-sm: 10px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+        color: var(--ink-0);
+        background:
+          radial-gradient(60% 60% at 10% 10%, rgba(47, 163, 122, 0.15), transparent 60%),
+          radial-gradient(50% 50% at 90% 0%, rgba(233, 169, 74, 0.18), transparent 55%),
+          linear-gradient(160deg, var(--bg-0), var(--bg-1) 40%, var(--bg-2) 80%);
+        min-height: 100vh;
+      }
+
+      main {
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 56px 20px 80px;
+      }
+
+      header {
+        display: grid;
+        gap: 12px;
+        margin-bottom: 32px;
+        animation: rise 0.9s ease both;
+      }
+
+      .eyebrow {
+        font-size: 13px;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--ink-2);
+        font-weight: 600;
+      }
+
+      h1 {
+        font-size: clamp(2.4rem, 2.8vw, 3.2rem);
+        margin: 0;
+        letter-spacing: -0.02em;
+      }
+
+      .subtitle {
+        margin: 0;
+        color: var(--ink-2);
+        font-size: 1.05rem;
+      }
+
+      .lookup-card {
+        background: var(--card);
+        border-radius: var(--radius-lg);
+        padding: 24px;
+        box-shadow: var(--shadow);
+        display: grid;
+        gap: 16px;
+        animation: rise 1s 0.1s ease both;
+      }
+
+      form {
+        display: grid;
+        gap: 14px;
+      }
+
+      .input-row {
+        display: grid;
+        gap: 12px;
+        grid-template-columns: minmax(0, 1fr) auto;
+      }
+
+      input[type="text"] {
+        width: 100%;
+        padding: 14px 16px;
+        border-radius: var(--radius-md);
+        border: 1px solid rgba(31, 107, 88, 0.2);
+        font-size: 1rem;
+        color: var(--ink-1);
+        background: #fcfdfb;
+        transition: border 0.2s ease, box-shadow 0.2s ease;
+      }
+
+      input[type="text"]:focus {
+        outline: none;
+        border-color: var(--accent-0);
+        box-shadow: 0 0 0 3px rgba(47, 163, 122, 0.15);
+      }
+
+      button {
+        font-family: inherit;
+        border: none;
+        border-radius: var(--radius-md);
+        padding: 14px 20px;
+        font-size: 0.98rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+      }
+
+      .primary {
+        background: linear-gradient(140deg, var(--accent-0), var(--accent-1));
+        color: #ffffff;
+        box-shadow: 0 10px 22px rgba(31, 107, 88, 0.2);
+      }
+
+      .primary:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 14px 24px rgba(31, 107, 88, 0.25);
+      }
+
+      .ghost {
+        background: transparent;
+        border: 1px dashed rgba(31, 107, 88, 0.3);
+        color: var(--accent-0);
+        padding: 10px 14px;
+      }
+
+      .helper {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px;
+        font-size: 0.92rem;
+        color: var(--ink-2);
+      }
+
+      .helper code {
+        background: rgba(31, 107, 88, 0.08);
+        padding: 2px 6px;
+        border-radius: 6px;
+        font-size: 0.9rem;
+      }
+
+      .status {
+        font-size: 0.95rem;
+        color: var(--ink-2);
+      }
+
+      .status.error {
+        color: var(--danger);
+      }
+
+      .results {
+        margin-top: 28px;
+        display: grid;
+        gap: 18px;
+        opacity: 0;
+        transform: translateY(16px);
+        transition: opacity 0.4s ease, transform 0.4s ease;
+      }
+
+      .results.visible {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      .player-card {
+        background: var(--card);
+        border-radius: var(--radius-lg);
+        padding: 24px;
+        box-shadow: var(--shadow);
+        display: grid;
+        gap: 18px;
+      }
+
+      .player-header {
+        display: grid;
+        gap: 16px;
+        grid-template-columns: auto 1fr;
+        align-items: center;
+      }
+
+      .avatar {
+        width: 84px;
+        height: 84px;
+        border-radius: 18px;
+        background: rgba(31, 107, 88, 0.08);
+        display: grid;
+        place-items: center;
+        overflow: hidden;
+      }
+
+      .avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      .player-title {
+        display: grid;
+        gap: 6px;
+      }
+
+      .player-title h2 {
+        margin: 0;
+        font-size: 1.6rem;
+      }
+
+      .player-title p {
+        margin: 0;
+        color: var(--ink-2);
+        font-size: 0.95rem;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .copy-btn {
+        background: rgba(31, 107, 88, 0.08);
+        color: var(--accent-0);
+        padding: 10px 14px;
+        border-radius: var(--radius-sm);
+        border: 1px solid rgba(31, 107, 88, 0.15);
+        font-size: 0.9rem;
+        font-weight: 600;
+      }
+
+      .copy-btn:hover {
+        background: rgba(31, 107, 88, 0.14);
+      }
+
+      .grid {
+        display: grid;
+        gap: 12px;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      }
+
+      .field {
+        background: #f9fbf7;
+        border-radius: var(--radius-md);
+        padding: 14px 16px;
+        border: 1px solid rgba(31, 107, 88, 0.12);
+        display: grid;
+        gap: 6px;
+      }
+
+      .field .label {
+        color: var(--ink-2);
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        font-weight: 600;
+      }
+
+      .field .value {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--ink-1);
+        word-break: break-word;
+      }
+
+      .field button {
+        justify-self: start;
+      }
+
+      .json {
+        background: #101a16;
+        color: #dbe6df;
+        border-radius: var(--radius-md);
+        padding: 18px;
+        font-family: "JetBrains Mono", "SFMono-Regular", Menlo, monospace;
+        font-size: 0.85rem;
+        overflow-x: auto;
+        border: 1px solid rgba(15, 27, 22, 0.2);
+      }
+
+      .footer {
+        margin-top: 36px;
+        font-size: 0.9rem;
+        color: var(--ink-2);
+      }
+
+      .pulse {
+        animation: pulse 1.2s ease-in-out infinite;
+      }
+
+      .hidden {
+        display: none;
+      }
+
+      @keyframes rise {
+        from {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 0.55;
+        }
+        50% {
+          opacity: 1;
+        }
+      }
+
+      @media (max-width: 640px) {
+        .input-row {
+          grid-template-columns: 1fr;
+        }
+
+        .player-header {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        * {
+          animation: none !important;
+          transition: none !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <div class="eyebrow">Hytale Lookup</div>
+        <h1>Find any Hytale profile instantly.</h1>
+        <p class="subtitle">
+          Search by username or UUID. Copy any field with one click.
+        </p>
+      </header>
+
+      <section class="lookup-card">
+        <form id="lookup-form" autocomplete="off">
+          <div class="input-row">
+            <input
+              id="query"
+              name="query"
+              type="text"
+              placeholder="Enter Hytale username or UUID"
+              spellcheck="false"
+              required
+            />
+            <button class="primary" type="submit">Lookup</button>
+          </div>
+          <div class="helper">
+            <span id="status" class="status"></span>
+          </div>
+        </form>
+      </section>
+
+      <section id="results" class="results">
+        <article class="player-card">
+          <div class="player-header">
+            <div class="avatar" id="avatar-box">
+              <img id="avatar" alt="Hytale avatar" />
+            </div>
+            <div class="player-title">
+              <h2 id="player-name">—</h2>
+              <p id="player-uuid">—</p>
+              <div class="actions" id="quick-actions"></div>
+            </div>
+          </div>
+
+          <div class="grid" id="fields"></div>
+
+          <div>
+            <div class="actions">
+              <button class="copy-btn" id="copy-link">Copy Share Link</button>
+            </div>
+          </div>
+        </article>
+
+        <div class="footer">
+          Powered by PlayerDB. This page only queries the Hytale route.
+        </div>
+      </section>
+    </main>
+
+    <script>
+      const form = document.getElementById("lookup-form");
+      const input = document.getElementById("query");
+      const statusEl = document.getElementById("status");
+      const results = document.getElementById("results");
+      const avatar = document.getElementById("avatar");
+      const avatarBox = document.getElementById("avatar-box");
+      const playerName = document.getElementById("player-name");
+      const playerUuid = document.getElementById("player-uuid");
+      const fields = document.getElementById("fields");
+      const copyLinkBtn = document.getElementById("copy-link");
+      const quickActions = document.getElementById("quick-actions");
+
+      const setStatus = (message, isError = false, isLoading = false) => {
+        statusEl.textContent = message;
+        statusEl.className = `status${isError ? " error" : ""}${isLoading ? " pulse" : ""}`;
+      };
+
+      const setResultsVisible = (visible) => {
+        if (visible) {
+          results.classList.add("visible");
+        } else {
+          results.classList.remove("visible");
+        }
+      };
+
+      const updateUrl = (query) => {
+        const url = new URL(window.location.href);
+        url.searchParams.set("q", query);
+        window.history.replaceState({}, "", url);
+      };
+
+      const copyToClipboard = async (text, label) => {
+        try {
+          await navigator.clipboard.writeText(text);
+          setStatus(`${label} copied.`);
+          setTimeout(() => setStatus(""), 1600);
+        } catch (err) {
+          setStatus("Copy failed. Try selecting the text manually.", true);
+        }
+      };
+
+      const flatten = (obj, prefix = "") => {
+        if (!obj || typeof obj !== "object") return [];
+        const entries = [];
+        for (const [key, value] of Object.entries(obj)) {
+          const label = prefix ? `${prefix}.${key}` : key;
+          if (value && typeof value === "object" && !Array.isArray(value)) {
+            entries.push(...flatten(value, label));
+          } else {
+            let display = value;
+            if (Array.isArray(value)) {
+              display = value.join(", ");
+            }
+            entries.push({ key: label, value: display });
+          }
+        }
+        return entries;
+      };
+
+      const renderFields = (player) => {
+        const baseFields = [
+          { key: "username", value: player.username },
+          { key: "id", value: player.id },
+          { key: "avatar", value: player.avatar },
+        ];
+
+        const metaFields = flatten(player.meta || {}, "meta");
+        const combined = baseFields
+          .concat(metaFields)
+          .filter((field) => field.value !== undefined && field.value !== null);
+
+        fields.innerHTML = "";
+        combined.forEach((field) => {
+          const fieldEl = document.createElement("div");
+          fieldEl.className = "field";
+
+          const label = document.createElement("div");
+          label.className = "label";
+          label.textContent = field.key;
+
+          const value = document.createElement("div");
+          value.className = "value";
+          value.textContent = String(field.value);
+
+          const button = document.createElement("button");
+          button.className = "copy-btn";
+          button.type = "button";
+          button.textContent = "Copy";
+          button.addEventListener("click", () => copyToClipboard(String(field.value), field.key));
+
+          fieldEl.appendChild(label);
+          fieldEl.appendChild(value);
+          fieldEl.appendChild(button);
+          fields.appendChild(fieldEl);
+        });
+      };
+
+      const renderPlayer = (player) => {
+        playerName.textContent = player.username || "Unknown";
+        playerUuid.textContent = player.id || "UUID not available";
+
+        if (player.avatar) {
+          avatar.src = player.avatar;
+          avatarBox.classList.remove("hidden");
+        } else {
+          avatar.removeAttribute("src");
+          avatarBox.classList.add("hidden");
+        }
+
+        quickActions.innerHTML = "";
+        if (player.username) {
+          const btn = document.createElement("button");
+          btn.className = "copy-btn";
+          btn.type = "button";
+          btn.textContent = "Copy Username";
+          btn.addEventListener("click", () => copyToClipboard(player.username, "Username"));
+          quickActions.appendChild(btn);
+        }
+        if (player.id) {
+          const btn = document.createElement("button");
+          btn.className = "copy-btn";
+          btn.type = "button";
+          btn.textContent = "Copy UUID";
+          btn.addEventListener("click", () => copyToClipboard(player.id, "UUID"));
+          quickActions.appendChild(btn);
+        }
+        if (player.avatar) {
+          const btn = document.createElement("button");
+          btn.className = "copy-btn";
+          btn.type = "button";
+          btn.textContent = "Copy Avatar URL";
+          btn.addEventListener("click", () => copyToClipboard(player.avatar, "Avatar URL"));
+          quickActions.appendChild(btn);
+        }
+
+        renderFields(player);
+      };
+
+      const lookup = async (query, pushUrl = false) => {
+        const trimmed = query.trim();
+        if (!trimmed) {
+          setStatus("Please enter a username or UUID.", true);
+          return;
+        }
+
+        setStatus("Looking up player...", false, true);
+        setResultsVisible(false);
+
+        try {
+          const response = await fetch(
+            `https://playerdb.co/api/player/hytale/${encodeURIComponent(trimmed)}`,
+            {
+              headers: {
+                Accept: "application/json",
+              },
+            }
+          );
+
+          const payload = await response.json();
+
+          if (!payload?.success || !payload?.data?.player) {
+            throw new Error(payload?.message || "Player not found.");
+          }
+
+          renderPlayer(payload.data.player);
+          setResultsVisible(true);
+          setStatus("Done.");
+          if (pushUrl) updateUrl(trimmed);
+        } catch (err) {
+          setStatus(err.message || "Lookup failed.", true);
+          setResultsVisible(false);
+        }
+      };
+
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        lookup(input.value, true);
+      });
+
+      copyLinkBtn.addEventListener("click", () => {
+        const url = new URL(window.location.href);
+        const q = input.value.trim();
+        if (q) url.searchParams.set("q", q);
+        copyToClipboard(url.toString(), "Share link");
+      });
+
+      window.addEventListener("load", () => {
+        const params = new URLSearchParams(window.location.search);
+        const q = params.get("q");
+        if (q) {
+          input.value = q;
+          lookup(q, false);
+        }
+      });
+    </script>
+  </body>
+</html>
